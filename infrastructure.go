@@ -47,6 +47,14 @@ func (client *Client) reset() error {
 }
 
 func (client *Client) CallFor(ctx context.Context, out interface{}, method string, params ...interface{}) error {
+	if client.c == nil {
+		// Auth failed last time, try refreshing
+		err := client.reset()
+		if err != nil {
+			return err
+		}
+	}
+
 	err := client.c.CallFor(ctx, out, method, params...)
 
 	// Detect an auth failure
@@ -138,7 +146,9 @@ func (config *ConnConfig) retrieveCookie() (username, passphrase string, err err
 func New(config *ConnConfig) (*Client, error) {
 	client := &Client{c: nil, config: config}
 
-	err := client.reset()
+	// Deliberately ignore errors here, so that we can try again when an actual
+	// request comes in.
+	client.reset()
 
-	return client, err
+	return client, nil
 }
